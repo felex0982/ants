@@ -21,14 +21,16 @@ public class ants extends PApplet {
 // Flowfield and Particle-Behaviours taken from Daniel Shiffman http://codingtra.in
 
 Animation ant;
-int antCount = 200;
+int antCount = 1000;
 FlowField flowfield;
 ArrayList<Particle> particles;
 
 boolean debug = false;
 
 public void setup() {
+
   
+  //size(800, 800);
   background(255);
   frameRate(15);
   ant = new Animation("ant_", 7);
@@ -45,9 +47,8 @@ public void setup() {
 
 public void draw() {   
   background(255);
-  ant.display(100, 100);
-  
-  flowfield.update();
+
+  //flowfield.update();
   
   if (debug) flowfield.display();
   
@@ -77,7 +78,7 @@ class Animation {
 
   public void display(float xpos, float ypos) {
     frame = (frame+1) % imageCount;
-    image(images[frame], -getWidth()+xpos, -getHeight()+ypos);
+    image(images[frame], -getWidth()/2+xpos, -getHeight()/2+ypos);
   }
   
   public int getWidth() {
@@ -102,27 +103,41 @@ public class Particle {
     acc = new PVector(0, 0);
     previousPos = pos.copy();
   }
+
   public void run() {
     update();
     edges();
     show();
   }
+
   public void update() {
     pos.add(vel);
     vel.limit(maxSpeed);
     vel.add(acc);
     acc.mult(0);
   }
+
   public void applyForce(PVector force) {
     acc.add(force); 
   }
+
   public void show() {
     stroke(0);
     strokeWeight(1);
-    line(pos.x, pos.y, previousPos.x, previousPos.y);
-    //point(pos.x, pos.y);
+    //line(pos.x, pos.y, previousPos.x, previousPos.y);
+    float dx = previousPos.x - pos.x;
+    float dy = previousPos.y - pos.y;
+    float theta = atan2(dy, dx) - PI/2;
+    //stroke(255,0,0);
+    pushMatrix();
+      translate(pos.x, pos.y);
+      rotate(theta);
+      ant.display(0,0);
+      //line(0,0,0,20);
+    popMatrix();
     updatePreviousPos();
   }
+
   public void edges() {
     if (pos.x > width) {
       pos.x = 0;
@@ -141,10 +156,12 @@ public class Particle {
       updatePreviousPos();
     }
   }
+
   public void updatePreviousPos() {
     this.previousPos.x = pos.x;
     this.previousPos.y = pos.y;
   }
+
   public void follow(FlowField flowfield) {
     int x = floor(pos.x / flowfield.scl);
     int y = floor(pos.y / flowfield.scl);
@@ -209,7 +226,7 @@ public class FlowField {
     }
   }
 }
-  public void settings() {  size(800, 800); }
+  public void settings() {  fullScreen(); }
   static public void main(String[] passedArgs) {
     String[] appletArgs = new String[] { "ants" };
     if (passedArgs != null) {
