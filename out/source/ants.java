@@ -14,27 +14,48 @@ import java.io.IOException;
 
 public class ants extends PApplet {
 
-Animation animation1, animation2;
+// ANTS
+// Felix Wagner http://maeoc.de
+//
+// Illustration by D!ve http://diveonreentry.com
+// Flowfield and Particle-Behaviours taken from Daniel Shiffman http://codingtra.in
 
-float xpos;
-float ypos;
-float drag = 30.0f;
+Animation ant;
+int antCount = 200;
+FlowField flowfield;
+ArrayList<Particle> particles;
+
+boolean debug = false;
 
 public void setup() {
   
   background(255);
   frameRate(15);
-  animation1 = new Animation("ant_", 7);
-  ypos = height * 0.25f;
+  ant = new Animation("ant_", 7);
+
+  flowfield = new FlowField(10);
+  flowfield.update();
+
+  particles = new ArrayList<Particle>();
+  for (int i = 0; i < antCount; i++) {
+    PVector start = new PVector(random(width), random(height));
+    particles.add(new Particle(start, random(2, 8)));
+  }
 }
 
 public void draw() {   
   background(255);
-  animation1.display(100, 100);
+  ant.display(100, 100);
+  
+  flowfield.update();
+  
+  if (debug) flowfield.display();
+  
+  for (Particle p : particles) {
+    p.follow(flowfield);
+    p.run();
+  }
 }
-
-
-
 
 // Class for animating a sequence of GIFs
 
@@ -64,6 +85,128 @@ class Animation {
   }
   public int getHeight() {
     return images[0].height;
+  }
+}
+
+public class Particle {
+  PVector pos;
+  PVector vel;
+  PVector acc;
+  PVector previousPos;
+  float maxSpeed;
+   
+  Particle(PVector start, float maxspeed) {
+    maxSpeed = maxspeed;
+    pos = start;
+    vel = new PVector(0, 0);
+    acc = new PVector(0, 0);
+    previousPos = pos.copy();
+  }
+  public void run() {
+    update();
+    edges();
+    show();
+  }
+  public void update() {
+    pos.add(vel);
+    vel.limit(maxSpeed);
+    vel.add(acc);
+    acc.mult(0);
+  }
+  public void applyForce(PVector force) {
+    acc.add(force); 
+  }
+  public void show() {
+    stroke(0);
+    strokeWeight(1);
+    line(pos.x, pos.y, previousPos.x, previousPos.y);
+    //point(pos.x, pos.y);
+    updatePreviousPos();
+  }
+  public void edges() {
+    if (pos.x > width) {
+      pos.x = 0;
+      updatePreviousPos();
+    }
+    if (pos.x < 0) {
+      pos.x = width;    
+      updatePreviousPos();
+    }
+    if (pos.y > height) {
+      pos.y = 0;
+      updatePreviousPos();
+    }
+    if (pos.y < 0) {
+      pos.y = height;
+      updatePreviousPos();
+    }
+  }
+  public void updatePreviousPos() {
+    this.previousPos.x = pos.x;
+    this.previousPos.y = pos.y;
+  }
+  public void follow(FlowField flowfield) {
+    int x = floor(pos.x / flowfield.scl);
+    int y = floor(pos.y / flowfield.scl);
+    int index = x + y * flowfield.cols;
+    
+    PVector force = flowfield.vectors[index];
+    applyForce(force);
+  }
+}
+// Daniel Shiffman
+// http://youtube.com/thecodingtrain
+// http://codingtra.in
+//
+// Coding Challenge #24: Perlin Noise Flow  Field
+// https://youtu.be/BjoM9oKOAKY
+
+public class FlowField {
+  PVector[] vectors;
+  int cols, rows;
+  float inc = 0.1f;
+  float zoff = 0;
+  int scl;
+  
+  FlowField(int res) {
+    scl = res;
+    cols = floor(width / res) + 1;
+    rows = floor(height / res) + 1;
+    vectors = new PVector[cols * rows];
+  }
+  public void update() {
+    float xoff = 0;
+    for (int y = 0; y < rows; y++) { 
+      float yoff = 0;
+      for (int x = 0; x < cols; x++) {
+        float angle = noise(xoff, yoff, zoff) * TWO_PI * 4;
+        
+        PVector v = PVector.fromAngle(angle);
+        v.setMag(1);
+        int index = x + y * cols;
+        vectors[index] = v;
+       
+        xoff += inc;
+      }
+      yoff += inc;
+    }
+    zoff += 0.004f;
+  }
+  public void display() {
+    for (int y = 0; y < rows; y++) { 
+      for (int x = 0; x < cols; x++) {
+        int index = x + y * cols;
+        PVector v = vectors[index];
+        
+        stroke(0, 0, 0, 40);
+        strokeWeight(0.1f);
+        pushMatrix();
+        translate(x * scl, y * scl);
+        rotate(v.heading());
+        line(0, 0, scl, 0);
+        popMatrix();
+      }
+    }
   }
 }
   public void settings() {  size(800, 800); }
